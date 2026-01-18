@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}} | AfroMint</title>
+    <meta name="description" content="{{DESCRIPTION}}">
+    <link rel="stylesheet" href="/styles.css">
+
+    <!-- inline critical css if needed, for now standard link -->
+    <style>
+        /* Critical minimal styles ensuring text is visible while CSS loads */
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1><a href="/" style="color:white; text-decoration:none;">AfroMint</a></h1>
+        <p class="tagline">Daily Simple News for Africa</p>
+
+        <!-- Search Bar -->
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search news..." onkeyup="searchNews()">
+            <div id="searchResults" class="search-results"></div>
+        </div>
+    </header>
+
+    <div id="featured-news">
+        <!-- Featured/Breaking News Banner -->
+        {{FEATURED_NEWS}}
+    </div>
+
+    <!-- Scrollable Nav -->
+    <nav>
+        <a href="/" class="{{NAV_HOME_ACTIVE}}">Home</a>
+        <a href="/category/world.html" class="{{NAV_WORLD_ACTIVE}}">World</a>
+        <a href="/category/politics.html" class="{{NAV_POLITICS_ACTIVE}}">Politics</a>
+        <a href="/category/government.html" class="{{NAV_GOVERNMENT_ACTIVE}}">Govt</a>
+        <a href="/category/business.html" class="{{NAV_BUSINESS_ACTIVE}}">Business</a>
+        <a href="/category/jobs.html" class="{{NAV_JOBS_ACTIVE}}">Jobs</a>
+        <a href="/category/sports.html" class="{{NAV_SPORTS_ACTIVE}}">Sports</a>
+        <a href="/category/entertainment.html" class="{{NAV_ENTERTAINMENT_ACTIVE}}">Entertainment</a>
+        <a href="/category/technology.html" class="{{NAV_TECHNOLOGY_ACTIVE}}">Tech</a>
+        <a href="/category/health.html" class="{{NAV_HEALTH_ACTIVE}}">Health</a>
+    </nav>
+
+    <main>
+        {{CONTENT}}
+    </main>
+
+    <footer>
+        <p>&copy; 2026 AfroMint. Automated & Open Source.</p>
+        <p><small>News updated every 6 hours.</small></p>
+    </footer>
+
+    <script>
+        // Minimal script for image fade-in
+        document.addEventListener("DOMContentLoaded", function () {
+            var lazyImages = [].slice.call(document.querySelectorAll("img.lazy"));
+            if ("IntersectionObserver" in window) {
+                let lazyImageObserver = new IntersectionObserver(function (entries, observer) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            let lazyImage = entry.target;
+                            lazyImage.src = lazyImage.dataset.src;
+                            lazyImage.classList.add("loaded");
+                            lazyImage.classList.remove("lazy");
+                            lazyImageObserver.unobserve(lazyImage);
+                        }
+                    });
+                });
+                lazyImages.forEach(function (lazyImage) {
+                    lazyImageObserver.observe(lazyImage);
+                });
+            }
+        });
+
+        // Simple Client-Side Search
+        let allNewsData = [];
+
+        // Load data for search
+        fetch('/news.json')
+            .then(response => response.json())
+            .then(data => {
+                allNewsData = data;
+            })
+            .catch(err => console.log('Search index not loaded'));
+
+        function searchNews() {
+            const input = document.getElementById('searchInput');
+            const filter = input.value.toLowerCase();
+            const resultsDiv = document.getElementById('searchResults');
+
+            if (filter.length < 3) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            const results = allNewsData.filter(item =>
+                item.title.toLowerCase().includes(filter) ||
+                item.summary.toLowerCase().includes(filter)
+            );
+
+            resultsDiv.innerHTML = '';
+            if (results.length > 0) {
+                resultsDiv.style.display = 'block';
+                results.slice(0, 5).forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'search-item';
+                    div.innerHTML = `<a href="/article/${item.urlSlug}.html">${item.title}</a>`;
+                    resultsDiv.appendChild(div);
+                });
+            } else {
+                resultsDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>
