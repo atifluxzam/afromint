@@ -24,5 +24,5 @@ module.exports = {
     ],
     // API Configuration constants
     MAX_ARTICLES_PER_CATEGORY: 5,
-    ITEMS_PER_FEED: 50 // Increased to target ~85% of daily free tier (50 * 6 feeds * 4 runs = ~1200 reqs/day max)
+    ITEMS_PER_FEED: 3 // Reduced to 3 items per feed for hourly updates (3 * 6 feeds * 24 runs = ~432 reqs/day)
 };
