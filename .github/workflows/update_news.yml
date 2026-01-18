@@ -1,8 +1,10 @@
 name: Auto Update News
 
 on:
+  push:
+    branches: [ "main", "master" ]
   schedule:
-    - cron: '0 */6 * * *' # Run every 6 hours
+    - cron: '0 * * * *' # Run every hour
   workflow_dispatch: # Allow manual run
 
 permissions:
