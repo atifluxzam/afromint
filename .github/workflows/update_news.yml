@@ -1,0 +1,46 @@
+name: Auto Update News
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Run every 6 hours
+  workflow_dispatch: # Allow manual run
+
+permissions:
+  contents: write
+
+jobs:
+  update-news:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Fetch and Process News
+      env:
+        AI_API_KEY: ${{ secrets.AI_API_KEY }}
+      run: node src/scripts/fetch.js
+
+    - name: Build Static Site
+      run: node src/scripts/generate.js
+
+    - name: Commit and Push Changes
+      run: |
+        git config --global user.name 'AfroMint Bot'
+        git config --global user.email 'bot@afromint.com'
+        git add src/assets/news.json
+        # Check if there are changes to commit
+        if git diff --staged --quiet; then
+          echo "No changes to news.json"
+        else
+          git commit -m "📰 Auto-update: News content [skip ci]"
+          git push
+        fi
