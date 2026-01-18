@@ -43,6 +43,6 @@ jobs:
         if git diff --staged --quiet; then
           echo "No changes to news.json"
         else
-          git commit -m "📰 Auto-update: News content [skip ci]"
+          git commit -m "📰 Auto-update: News content "
           git push
         fi
