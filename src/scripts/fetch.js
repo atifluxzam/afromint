@@ -7,7 +7,7 @@ const slugify = require('slugify');
 
 const parser = new Parser();
 
-// AI Rewriting Logic (Simulated for setup, needs API Key)
+// AI Rewriting Logic (Gemini Flash - WORKING)
 async function rewriteContent(title, content, category) {
     if (!process.env.AI_API_KEY) {
         console.warn("⚠️ No AI API Key found. Skipping rewrite (using raw summary).");
@@ -21,39 +21,67 @@ async function rewriteContent(title, content, category) {
 
     try {
         const prompt = `
-        You are a kid-friendly news reporter for Africa. 
-        Rewrite this news item for a Class 2 student level (simple English).
-        
-        CRITICAL: The article must be at least 500 words long. Expand with context, "Did you know?" facts, and detailed simple explanations.
-        
-        Original Title: ${title}
-        Original Content: ${content}
-        
-        Output JSON format only:
-        {
-            "title": "Simple headline here",
-            "content": "Full simple article here (At least 500 words, use <h3> subheadings, short paragraphs)",
-            "summary": "1 sentence summary",
-            "whyMatters": "Why this is important in simple words"
-        }
+You are a kid-friendly news reporter for Africa. 
+Rewrite this news item for a Class 2 student level (simple English).
+
+CRITICAL:
+- The article must be at least 500 words long
+- Use <h3> subheadings
+- Use short paragraphs
+- Add simple explanations and "Did you know?" facts
+
+Original Title: ${title}
+Original Content: ${content}
+
+Output JSON format only:
+{
+  "title": "Simple headline here",
+  "content": "Full simple article here (At least 500 words, use <h3> subheadings, short paragraphs)",
+  "summary": "1 sentence summary",
+  "whyMatters": "Why this is important in simple words"
+}
         `;
 
-        // Gemini API Call
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${process.env.AI_API_KEY}`;
+        // ✅ CORRECT Gemini model + endpoint
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${process.env.AI_API_KEY}`;
 
-        const response = await axios.post(geminiUrl, {
-            contents: [{
-                parts: [{ text: prompt }]
-            }]
-        });
+        const response = await axios.post(
+            geminiUrl,
+            {
+                contents: [
+                    {
+                        parts: [{ text: prompt }]
+                    }
+                ]
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
 
-        const rawData = response.data.candidates[0].content.parts[0].text;
+        const rawData =
+            response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (!rawData) {
+            throw new Error("Empty response from Gemini API");
+        }
+
         // Clean markdown code blocks if present
-        const jsonStr = rawData.replace(/```json/g, '').replace(/```/g, '').trim();
+        const jsonStr = rawData
+            .replace(/```json/gi, '')
+            .replace(/```/g, '')
+            .trim();
+
         return JSON.parse(jsonStr);
 
     } catch (error) {
-        console.error("AI Error:", error.response ? error.response.data : error.message);
+        console.error(
+            "AI Error:",
+            error.response ? JSON.stringify(error.response.data, null, 2) : error.message
+        );
+
         return {
             title: title,
             content: content, // Fallback
@@ -64,9 +92,6 @@ async function rewriteContent(title, content, category) {
 }
 
 async function getImage(query) {
-    // Royalty free header image (Unsplash source or similar static placeholder generator)
-    // Using source.unsplash.com is deprecated/unreliable, better to use specific keywords
-    // For now, returning a reliable placeholder service with keywords
     return `https://image.pollinations.ai/prompt/${encodeURIComponent(query)}?width=800&height=400&nologo=true`;
 }
 
@@ -85,7 +110,7 @@ async function fetchNews() {
             for (const item of items) {
                 // Determine Category
                 let categoryId = 'world'; // default
-                const combinedText = (item.title + " " + item.contentSnippet).toLowerCase();
+                const combinedText = ((item.title || "") + " " + (item.contentSnippet || "")).toLowerCase();
 
                 for (const cat of config.categories) {
                     if (cat.keywords.some(k => combinedText.includes(k))) {
@@ -96,11 +121,18 @@ async function fetchNews() {
 
                 console.log(`Processing: ${item.title} [${categoryId}]`);
 
-                // Rewrite
-                const rewritten = await rewriteContent(item.title, item.contentSnippet || item.content || "", config.categories.find(c => c.id === categoryId).name);
+                const categoryName =
+                    config.categories.find(c => c.id === categoryId)?.name || "General";
 
-                // Image - Enhanced Prompt for Realism
-                const imagePrompt = `${rewritten.title} realistic news photography context ${config.categories.find(c => c.id === categoryId).name} high quality`;
+                // Rewrite
+                const rewritten = await rewriteContent(
+                    item.title,
+                    item.contentSnippet || item.content || "",
+                    categoryName
+                );
+
+                // Image
+                const imagePrompt = `${rewritten.title} realistic news photography context ${categoryName} high quality`;
                 const imageUrl = await getImage(imagePrompt);
 
                 allArticles.push({
@@ -117,8 +149,7 @@ async function fetchNews() {
                 });
 
                 // RATE LIMITING PROTECTION
-                // Gemini Free Tier allows 15 requests per minute (1 request every 4 seconds).
-                // We wait 5 seconds here to be absolutely safe.
+                // Free tier safe delay
                 console.log("Waiting 5s to respect API limits...");
                 await new Promise(resolve => setTimeout(resolve, 5000));
             }
@@ -135,4 +166,3 @@ async function fetchNews() {
 }
 
 fetchNews();
-
